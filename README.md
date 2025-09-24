@@ -9,6 +9,8 @@ A minimal Python prototype demonstrating an agentic coding pipeline with clarifi
 
 2. ClarifyAgent (src/agents/clarify.py)  
    Retrieves clarification questions from a mock ClarifyCoder and simulates developer answers.
+   - Optional: reads/writes a JSON-backed Knowledge Base (`.clarifyflow/kb.json`).
+   - Optional: interactive mode lets you type answers, stored with provenance=user.
 
 3. CoderAgent (src/agents/coder.py)  
    Generates deterministic Python code strings. Clarified path produces more robust implementations.
@@ -25,6 +27,7 @@ Defined in tests/unit_tests.py:
 
 - factorial: Clarified behavior returns None for negative inputs (baseline raises).
 - parse_csv_line: Clarified version supports quoted commas and trimming.
+- is_anagram: Case/whitespace-insensitive anagram check.
 
 ## Setup
 
@@ -52,6 +55,8 @@ Feature toggles (either CLI flags or env vars):
 - Planner uses OpenAI: `--use-openai-planner` or `CLARIFYFLOW_USE_OPENAI_PLANNER=1`
 - Clarifier uses Gemini: `--use-gemini` or `CLARIFYFLOW_USE_GEMINI_CLARIFIER=1`
 - Coder uses OpenAI: `--use-openai-coder` or `CLARIFYFLOW_USE_OPENAI_CODER=1`
+ - Interactive clarify: `--interactive-clarify` or `CLARIFYFLOW_INTERACTIVE_CLARIFY=1`
+ - Use KB for caching clarifications: default ON; override with `CLARIFYFLOW_USE_KB=0`
 
 ## Run Pipeline
 
@@ -77,6 +82,7 @@ JSON file schema (top-level keys):
    "openai_planner": true,
    "gemini_clarifier": true,
    "openai_coder": true,
+   "interactive_clarify": false,
    "runs": [
       {
          "task": "factorial",
@@ -90,6 +96,26 @@ JSON file schema (top-level keys):
    ]
 }
 ```
+
+## Knowledge Base (KB)
+
+- Location: `.clarifyflow/kb.json` (override via `CLARIFYFLOW_KB_PATH`).
+- Structure: keyed by task and a hash of the description; stores `q_and_a`, `provenance`, `updated_at`, and a short `description_preview`.
+- KB is read first; if present, questions are skipped and answers are reused.
+
+Admin CLI:
+
+- List entries for all tasks (or a specific task):
+   - `python -m src.pipeline --kb-list`
+   - `python -m src.pipeline --kb-list factorial`
+- Clear entries for all tasks (or a specific task):
+   - `python -m src.pipeline --kb-clear`
+   - `python -m src.pipeline --kb-clear parse_csv_line`
+
+Interactive clarify (store user answers):
+
+- `python -m src.pipeline --interactive-clarify --tasks factorial`
+- You'll be prompted per question; non-empty answers are stored in KB with `provenance=user`.
 
 ## Example Output (abridged)
 
