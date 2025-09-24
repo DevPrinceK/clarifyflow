@@ -23,4 +23,15 @@ TASK_SPECS = {
             {"input": ['  "x, y" ,z '], "expected": ["x, y", "z"]},
         ],
     },
+    "is_anagram": {
+        "description": "Implement is_anagram(a, b) to return True if two strings are anagrams. Ignore case and whitespace.",
+        "function": "is_anagram",
+        "tests": [
+            {"input": ["listen", "silent"], "expected": True},
+            {"input": ["Triangle", "Integral"], "expected": True},
+            {"input": ["Dormitory", "Dirty room"], "expected": True},
+            {"input": ["Hello", "World"], "expected": False},
+            # Clarified behavior: ignore spaces & case; treat only letters by default
+        ],
+    },
 }
