@@ -15,7 +15,7 @@ except Exception:  # pragma: no cover
 
 
 class ClarifyAgent:
-    def __init__(self, use_gemini: Optional[bool] = None, use_kb: Optional[bool] = None):
+    def __init__(self, use_gemini: Optional[bool] = None, use_kb: Optional[bool] = None, use_interactive: Optional[bool] = None):
         if use_gemini is None:
             env_flag = os.getenv("CLARIFYFLOW_USE_GEMINI_CLARIFIER", "false").lower()
             use_gemini = env_flag in {"1", "true", "yes", "on"}
@@ -24,6 +24,10 @@ class ClarifyAgent:
             kb_flag = os.getenv("CLARIFYFLOW_USE_KB", "true").lower()  # default on
             use_kb = kb_flag in {"1", "true", "yes", "on"}
         self.use_kb = use_kb
+        if use_interactive is None:
+            inter_flag = os.getenv("CLARIFYFLOW_INTERACTIVE_CLARIFY", "false").lower()
+            use_interactive = inter_flag in {"1", "true", "yes", "on"}
+        self.use_interactive = bool(use_interactive)
         self.kb = KnowledgeBase() if self.use_kb else None
         self.clarifycoder = ClarifyCoderMock()
 
@@ -46,8 +50,19 @@ class ClarifyAgent:
         else:
             questions = self.clarifycoder.get_questions(task_name, description)
         answers: Dict[str, str] = {}
+        user_provided_any = False
         for q in questions:
-            # Simulated developer answers (hardcoded for prototype)
+            # Interactive prompt branch
+            if self.use_interactive:
+                try:
+                    user_in = input(f"Clarification needed for '{task_name}'.\nQ: {q}\nEnter your answer (leave blank to skip): ")
+                except EOFError:
+                    user_in = ""
+                if user_in and user_in.strip():
+                    answers[q] = user_in.strip()
+                    user_provided_any = True
+                    continue
+            # Non-interactive or skipped: use simulated defaults
             if task_name == "factorial":
                 ans = "Return None for negative inputs instead of raising errors."
             elif task_name == "parse_csv_line":
@@ -58,7 +73,8 @@ class ClarifyAgent:
         # 3) Save to KB
         if self.kb and answers:
             try:
-                self.kb.put(task_name, description, answers)
+                provenance = "user" if user_provided_any else "mock"
+                self.kb.put(task_name, description, answers, provenance=provenance)
             except Exception:
                 pass
         return answers
