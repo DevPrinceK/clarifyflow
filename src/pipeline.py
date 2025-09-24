@@ -56,12 +56,13 @@ from src.agents.clarifier_agent import ClarifyAgent
 from src.agents.coder_agent import CoderAgent
 from src.agents.verifier_agent import VerifierAgent
 from tests.unit_tests import TASK_SPECS
+from src.clarifycoder.kb import KnowledgeBase
 
 
 class ClarifyFlowPipeline:
-    def __init__(self, use_openai_planner: bool | None = None, use_gemini: bool | None = None, use_openai_coder: bool | None = None):
+    def __init__(self, use_openai_planner: bool | None = None, use_gemini: bool | None = None, use_openai_coder: bool | None = None, interactive_clarify: bool | None = None):
         self.planner = PlannerAgent(use_llm=use_openai_planner)
-        self.clarifier = ClarifyAgent(use_gemini=use_gemini)
+        self.clarifier = ClarifyAgent(use_gemini=use_gemini, use_kb=None, use_interactive=interactive_clarify)
         self.coder = CoderAgent(use_llm=use_openai_coder)
         self.verifier = VerifierAgent()
         self.run_records: List[Dict[str, Any]] = []  # accumulate JSON export entries
@@ -151,18 +152,38 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--no-use-gemini", dest="use_gemini", action="store_false", help="Disable Gemini clarifier explicitly")
     parser.add_argument("--use-openai-coder", dest="use_openai_coder", action="store_true", help="Use OpenAI for code generation")
     parser.add_argument("--no-use-openai-coder", dest="use_openai_coder", action="store_false", help="Disable OpenAI coder explicitly")
-    parser.set_defaults(use_openai_planner=None, use_gemini=None, use_openai_coder=None)
+    parser.add_argument("--interactive-clarify", dest="interactive_clarify", action="store_true", help="Prompt for user answers to clarification questions and store them in KB (provenance=user)")
+    # KB management
+    parser.add_argument("--kb-list", nargs="?", const="__ALL__", metavar="TASK", help="List KB entries (optionally filter by task)")
+    parser.add_argument("--kb-clear", nargs="?", const="__ALL__", metavar="TASK", help="Clear KB (optionally filter by task)")
+
+    parser.set_defaults(use_openai_planner=None, use_gemini=None, use_openai_coder=None, interactive_clarify=None)
     return parser.parse_args(argv)
 
 
 def main(argv: List[str] | None = None):
     _load_env_files()
     ns = parse_args(argv or sys.argv[1:])
+    # KB management commands
+    if ns.kb_list or ns.kb_clear:
+        kb = KnowledgeBase()
+        if ns.kb_list is not None:
+            task = None if ns.kb_list == "__ALL__" else ns.kb_list
+            listing = kb.list_entries(task)
+            print(json.dumps(listing, indent=2))
+        if ns.kb_clear is not None:
+            task = None if ns.kb_clear == "__ALL__" else ns.kb_clear
+            removed = kb.clear(task)
+            print(f"Cleared {removed} KB entrie(s){' for task ' + task if task else ''}.")
+        # If only KB operation(s) requested without tasks, exit early
+        if not ns.tasks:
+            return 0
     # If flags are None, agents will read environment variables
     pipeline = ClarifyFlowPipeline(
         use_openai_planner=ns.use_openai_planner,
         use_gemini=ns.use_gemini,
         use_openai_coder=ns.use_openai_coder,
+        interactive_clarify=ns.interactive_clarify,
     )
     if ns.tasks:
         unknown = [t for t in ns.tasks if t not in TASK_SPECS]
@@ -183,6 +204,7 @@ def main(argv: List[str] | None = None):
             "openai_planner": ns.use_openai_planner,
             "gemini_clarifier": ns.use_gemini,
             "openai_coder": ns.use_openai_coder,
+            "interactive_clarify": ns.interactive_clarify,
             "runs": pipeline.run_records,
         }
         with open(ns.json_path, "w", encoding="utf-8") as f:
