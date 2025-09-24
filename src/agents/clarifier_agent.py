@@ -2,19 +2,36 @@
 ClarifyAgent uses a (mock) ClarifyCoder module to obtain clarification questions and
 simulates developer answers.
 """
-from typing import Dict, List
+from typing import Dict, List, Optional
+import os
 from src.clarifycoder.mock import ClarifyCoderMock
+
+try:
+    from llm.gemini import generate_clarification_questions  # type: ignore
+    _GEMINI_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _GEMINI_AVAILABLE = False
 
 
 class ClarifyAgent:
-    def __init__(self):
+    def __init__(self, use_gemini: Optional[bool] = None):
+        if use_gemini is None:
+            env_flag = os.getenv("CLARIFYFLOW_USE_GEMINI_CLARIFIER", "false").lower()
+            use_gemini = env_flag in {"1", "true", "yes", "on"}
+        self.use_gemini = use_gemini and _GEMINI_AVAILABLE
         self.clarifycoder = ClarifyCoderMock()
 
     def clarify(self, task_name: str, description: str) -> Dict[str, str]:
         """
         Returns a dict of clarification question -> answer (simulated).
         """
-        questions: List[str] = self.clarifycoder.get_questions(task_name, description)
+        if self.use_gemini:
+            try:
+                questions = generate_clarification_questions(task_name, description)
+            except Exception:  # pragma: no cover
+                questions = self.clarifycoder.get_questions(task_name, description)
+        else:
+            questions = self.clarifycoder.get_questions(task_name, description)
         answers: Dict[str, str] = {}
         for q in questions:
             # Simulated developer answers (hardcoded for prototype)
