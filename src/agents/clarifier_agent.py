@@ -5,6 +5,7 @@ simulates developer answers.
 from typing import Dict, List, Optional
 import os
 from src.clarifycoder.mock import ClarifyCoderMock
+from src.clarifycoder.kb import KnowledgeBase
 
 try:
     from llm.gemini import generate_clarification_questions  # type: ignore
@@ -14,17 +15,29 @@ except Exception:  # pragma: no cover
 
 
 class ClarifyAgent:
-    def __init__(self, use_gemini: Optional[bool] = None):
+    def __init__(self, use_gemini: Optional[bool] = None, use_kb: Optional[bool] = None):
         if use_gemini is None:
             env_flag = os.getenv("CLARIFYFLOW_USE_GEMINI_CLARIFIER", "false").lower()
             use_gemini = env_flag in {"1", "true", "yes", "on"}
         self.use_gemini = use_gemini and _GEMINI_AVAILABLE
+        if use_kb is None:
+            kb_flag = os.getenv("CLARIFYFLOW_USE_KB", "true").lower()  # default on
+            use_kb = kb_flag in {"1", "true", "yes", "on"}
+        self.use_kb = use_kb
+        self.kb = KnowledgeBase() if self.use_kb else None
         self.clarifycoder = ClarifyCoderMock()
 
     def clarify(self, task_name: str, description: str) -> Dict[str, str]:
         """
         Returns a dict of clarification question -> answer (simulated).
         """
+        # 1) Try KB first
+        if self.kb:
+            cached = self.kb.get(task_name, description)
+            if cached:
+                return cached
+
+        # 2) Generate fresh questions via Gemini or mock
         if self.use_gemini:
             try:
                 questions = generate_clarification_questions(task_name, description)
@@ -42,4 +55,10 @@ class ClarifyAgent:
             else:
                 ans = "Default: follow Pythonic conventions."
             answers[q] = ans
+        # 3) Save to KB
+        if self.kb and answers:
+            try:
+                self.kb.put(task_name, description, answers)
+            except Exception:
+                pass
         return answers
