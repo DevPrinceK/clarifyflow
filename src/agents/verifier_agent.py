@@ -15,6 +15,9 @@ class TestResult:
         status = "PASS" if self.passed else "FAIL"
         return f"[{status}] {self.name} {('- ' + self.detail) if self.detail else ''}"
 
+    def to_dict(self):  # For JSON export
+        return {"name": self.name, "passed": self.passed, "detail": self.detail}
+
 
 class VerifierAgent:
     def run_tests(
