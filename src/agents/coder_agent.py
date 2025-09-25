@@ -42,6 +42,8 @@ class CoderAgent:
             return self._code_parse_csv_line(clarified, clarifications)
         if task_name == "is_anagram":
             return self._code_is_anagram(clarified, clarifications)
+        if task_name == "format_date":
+            return self._code_format_date(clarified, clarifications)
         raise ValueError(f"Unknown task: {task_name}")
 
     def _sanitize_llm_code(self, text: str) -> str:
@@ -70,6 +72,7 @@ class CoderAgent:
             "factorial": ("factorial", 1),
             "parse_csv_line": ("parse_csv_line", 1),
             "is_anagram": ("is_anagram", 2),
+            "format_date": ("format_date", 1),
         }
         return mapping.get(task_name)
 
@@ -187,4 +190,38 @@ def parse_csv_line(line: str):
     field = "".join(buf).strip()
     fields.append(field)
     return fields
+'''
+
+    def _code_format_date(self, clarified: bool, clarifications: Optional[Dict[str, str]]) -> str:
+        if not clarified:
+            return self._header("format_date", False, None) + '''
+def format_date(s: str) -> str:
+    """Baseline: assume input is YYYY/MM/DD and replace slashes with hyphens."""
+    return s.replace('/', '-')
+'''
+        return self._header("format_date", True, clarifications) + '''
+def format_date(s: str) -> str:
+    """Clarified: accept several common inputs and normalize to YYYY-MM-DD.
+    Supported examples: YYYY/MM/DD, MM-DD-YYYY, "9 Jan 2024", "Jan 9, 2024".
+    """
+    from datetime import datetime
+    s_clean = s.strip()
+    patterns = [
+        "%Y/%m/%d",
+        "%m-%d-%Y",
+        "%d %b %Y",
+        "%b %d, %Y",
+    ]
+    for p in patterns:
+        try:
+            dt = datetime.strptime(s_clean, p)
+            return dt.strftime("%Y-%m-%d")
+        except Exception:
+            pass
+    # Fallback: try plain YYYY-MM-DD or return as-is
+    try:
+        dt = datetime.strptime(s_clean, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        return s_clean
 '''
