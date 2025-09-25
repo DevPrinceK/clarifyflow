@@ -52,6 +52,8 @@ class PlannerAgent:
             return PlannerDecision(True, "CSV parsing task lacks quoted comma specification.")
         if "anagram" in lower and ("case" not in lower and "space" not in lower and "whitespace" not in lower):
             return PlannerDecision(True, "Anagram task lacks case/whitespace rules.")
+        if ("format_date" in lower or ("format" in lower and "date" in lower)) and ("yyyy" not in lower and "iso" not in lower and "yyyy-mm-dd" not in lower):
+            return PlannerDecision(True, "Date formatting task lacks target output format (e.g., YYYY-MM-DD).")
         # If heuristics say no, optionally consult LLM for latent ambiguities
         if self.use_llm:
             try:
