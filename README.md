@@ -21,6 +21,12 @@ A minimal Python prototype demonstrating an agentic coding pipeline with clarifi
 5. Orchestrator (src/pipeline.py)  
    Runs each task twice: baseline (no clarification) and ClarifyFlow (with clarification if needed).
 
+6. LLM Adapters (llm/openai.py, llm/gemini.py)
+   Optional connectors used by PlannerAgent/ClarifyAgent/CoderAgent when enabled.
+   - OpenAI (llm/openai.py): used for planning and code generation when flags/env are set. Reads `OPENAI_API_KEY` and supports `OPENAI_MODEL`.
+   - Gemini (llm/gemini.py): used by ClarifyAgent to propose clarification questions. Reads `GEMINI_API_KEY` and supports `GEMINI_MODEL`.
+   - Both adapters are optional; if SDKs or keys are missing, the code falls back to deterministic stubs. Toggle via CLI flags or env vars (see Setup).
+
 ## Tasks & Tests
 
 Defined in tests/unit_tests.py:
@@ -32,7 +38,7 @@ Defined in tests/unit_tests.py:
 
 ## Setup
 
-Python 3.9+ recommended.
+Python 3.10+ recommended.
 
 Clone the repository:
 
@@ -41,9 +47,7 @@ git clone https://github.com/DevPrinceK/clarifyflow.git
 cd clarifyflow
 ```
 
-Core prototype has no hard dependency on external LLM libraries. To enable real API calls:
-
-Optional dependencies:
+Dependencies:
 - `openai` (for planning & coding when flags enabled)
 - `google-generativeai` (for Gemini clarification questions)
 
@@ -52,13 +56,40 @@ python -m venv .venv
 cd .\venv\ # Windows PowerShell
 .\Scripts\activate
 pip install --upgrade pip
-pip install openai google-generativeai
+pip install openai google-generativeai # install deps manually
+---or---
+pip install -r requirements.txt # install from requirements file
 ```
 
-Environment variables (only needed if using LLM calls):
-- `OPENAI_API_KEY`
-- `GEMINI_API_KEY`
-- Optionally override models via `OPENAI_MODEL`, `GEMINI_MODEL`.
+Create and populate a .env file (for API keys & flags):
+
+- The pipeline auto-loads environment variables from either project root `.env` (preferred) or `src/.env`.
+- Do NOT commit real keys. Keep `.env` out of version control.
+
+```
+# API keys (required only if enabling LLMs)
+OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optionally override models
+OPENAI_MODEL=your-model-name
+GEMINI_MODEL=your-model-name
+
+# Feature flags (optional)
+CLARIFYFLOW_USE_OPENAI_PLANNER=1
+CLARIFYFLOW_USE_GEMINI_CLARIFIER=1
+CLARIFYFLOW_USE_OPENAI_CODER=1
+
+# Knowledge Base and interactivity (optional)
+CLARIFYFLOW_USE_KB=1
+CLARIFYFLOW_INTERACTIVE_CLARIFY=0
+
+# Reduce import noise from missing SDKs (0/1)
+CLARIFYFLOW_VERBOSE_IMPORTS=0
+
+# Optional: custom KB path
+# CLARIFYFLOW_KB_PATH=.clarifyflow/kb.json
+```
 
 Feature toggles (either CLI flags or env vars):
 - Planner uses OpenAI: `--use-openai-planner` or `CLARIFYFLOW_USE_OPENAI_PLANNER=1`
@@ -205,6 +236,8 @@ Improvement: +2 tests
 ## Extending
 
 Add new tasks in `tests/unit_tests.py` and update `CoderAgent` with generation templates (or rely on LLM path). When adding a new task for LLM usage, ensure the generated function name matches the test spec.
+
+**Feel free to open a PR.**
 
 ## License
 
