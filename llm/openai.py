@@ -84,7 +84,7 @@ def plan_task(problem_description: str) -> str:
 
 def generate_code(spec: str, clarifications: Optional[dict] = None) -> str:
     """
-    Example helper to produce code (not currently wired into pipeline, kept for future extension).
+    Example helper to produce code.
     """
     clar_block = ""
     if clarifications:
