@@ -15,4 +15,10 @@ class ClarifyCoderMock:
                 "Should spaces and punctuation be ignored when checking anagrams?",
                 "Is the comparison case-insensitive?",
             ]
+        if task_name == "format_date":
+            return [
+                "What is the required output format (e.g., YYYY-MM-DD)?",
+                "Which input formats must be supported (e.g., YYYY/MM/DD, MM-DD-YYYY, '9 Jan 2024')?",
+                "Should month/day be zero-padded?",
+            ]
         return ["Any edge cases to consider?"]
