@@ -4,18 +4,18 @@ A minimal Python prototype demonstrating an agentic coding pipeline with clarifi
 
 ## Components
 
-1. PlannerAgent (src/agents/planner.py)  
+1. PlannerAgent (src/agents/planner_agent.py)  
    Heuristically detects ambiguity (missing negative handling, CSV quoting, or vague terms).
 
-2. ClarifyAgent (src/agents/clarify.py)  
+2. ClarifyAgent (src/agents/clarifier_agent.py)  
    Retrieves clarification questions from a mock ClarifyCoder and simulates developer answers.
    - Optional: reads/writes a JSON-backed Knowledge Base (`.clarifyflow/kb.json`).
    - Optional: interactive mode lets you type answers, stored with provenance=user.
 
-3. CoderAgent (src/agents/coder.py)  
+3. CoderAgent (src/agents/coder_agent.py)  
    Generates deterministic Python code strings. Clarified path produces more robust implementations.
 
-4. VerifierAgent (src/agents/verifier.py)  
+4. VerifierAgent (src/agents/verifier_agent.py)  
    Dynamically executes generated code and runs task-specific tests.
 
 5. Orchestrator (src/pipeline.py)  
@@ -28,10 +28,18 @@ Defined in tests/unit_tests.py:
 - factorial: Clarified behavior returns None for negative inputs (baseline raises).
 - parse_csv_line: Clarified version supports quoted commas and trimming.
 - is_anagram: Case/whitespace-insensitive anagram check.
+- format_date: Normalize common date formats to YYYY-MM-DD in ClarifyFlow mode.
 
 ## Setup
 
 Python 3.9+ recommended.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/DevPrinceK/clarifyflow.git
+cd clarifyflow
+```
 
 Core prototype has no hard dependency on external LLM libraries. To enable real API calls:
 
@@ -41,9 +49,10 @@ Optional dependencies:
 
 ```bash
 python -m venv .venv
-".venv\\Scripts\\activate"  # Windows PowerShell
+cd .\venv\ # Windows PowerShell
+.\Scripts\activate
 pip install --upgrade pip
-pip install openai google-generativeai  # optional
+pip install openai google-generativeai
 ```
 
 Environment variables (only needed if using LLM calls):
@@ -65,6 +74,11 @@ All tasks, heuristic only:
 python -m src.pipeline
 ```
 
+Alternative execution (script style):
+```bash
+python src/pipeline.py
+```
+
 Select specific tasks & export JSON summary:
 ```bash
 python -m src.pipeline --tasks factorial parse_csv_line --json run_summary.json
@@ -74,6 +88,17 @@ Enable all LLM augmentations (requires API keys set):
 ```bash
 python -m src.pipeline --use-openai-planner --use-gemini --use-openai-coder --json runs_llm.json
 ```
+
+## LLM integrations
+
+- OpenAI (planning and coding): `llm/openai.py`
+   - Uses chat completions with temperature 0 for reproducibility.
+   - Falls back to a deterministic stub (prints a stub note) if the package or API key is unavailable.
+- Gemini (clarification questions): `llm/gemini.py`
+   - Generates clarification questions only.
+   - Falls back to a heuristic stub if the package or API key is unavailable.
+- Clarifier resolution order: KnowledgeBase → Gemini (if enabled) → Mock (`src/clarifycoder/mock.py`).
+- Planner can optionally consult OpenAI to flag latent ambiguities.
 
 JSON file schema (top-level keys):
 ```json
@@ -116,6 +141,24 @@ Interactive clarify (store user answers):
 
 - `python -m src.pipeline --interactive-clarify --tasks factorial`
 - You'll be prompted per question; non-empty answers are stored in KB with `provenance=user`.
+
+## Reproducibility notes
+
+- Deterministic by default when LLMs are off (templates only).
+- With LLMs enabled, temperature=0 is used; outputs are still subject to API-side variation.
+- The pipeline prints explicit PASS/FAIL per test case, plus a baseline vs ClarifyFlow summary.
+
+## Security notes
+
+- Do not commit real API keys. Prefer environment variables or a local untracked `.env`.
+- The VerifierAgent executes code in-process (not sandboxed).
+- If you use a local `.env`, ensure it is git-ignored.
+
+## Requirements
+
+- Minimal run (no LLMs): standard library only.
+- Optional LLMs: `pip install openai google-generativeai`.
+- The provided `requirements.txt` may contain extras; install only what you need.
 
 ## Example Output (abridged)
 
