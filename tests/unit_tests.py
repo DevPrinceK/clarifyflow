@@ -12,7 +12,7 @@ TASK_SPECS = {
         "tests": [
             {"input": [0], "expected": 1},
             {"input": [5], "expected": 120},
-            {"input": [-3], "expected": None},  # Clarified behavior
+            {"input": [-3], "expected": None},  # for Clarified behavior
         ],
     },
     "parse_csv_line": {
@@ -32,6 +32,16 @@ TASK_SPECS = {
             {"input": ["Dormitory", "Dirty room"], "expected": True},
             {"input": ["Hello", "World"], "expected": False},
             # Clarified behavior: ignore spaces & case; treat only letters by default
+        ],
+    },
+    "format_date": {
+        "description": "Implement format_date(s) to normalize common date strings to YYYY-MM-DD.",
+        "function": "format_date",
+        "tests": [
+            {"input": ["2024/01/09"], "expected": "2024-01-09"},
+            {"input": ["01-09-2024"], "expected": "2024-01-09"},  # MM-DD-YYYY
+            {"input": ["9 Jan 2024"], "expected": "2024-01-09"},
+            {"input": ["Jan 9, 2024"], "expected": "2024-01-09"},
         ],
     },
 }
