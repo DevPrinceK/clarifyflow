@@ -38,7 +38,7 @@ Defined in tests/unit_tests.py:
 
 ## Setup
 
-Python 3.10+ recommended.
+Python 3.9+ recommended.
 
 Clone the repository:
 
